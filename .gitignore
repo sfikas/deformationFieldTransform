@@ -1,8 +1,14 @@
-KwsEvalTool
+DeformationFieldTransform
 
-# This file is used to ignore files which are generated
-# ----------------------------------------------------------------------------
+# ITK
+ITKIOFactoryRegistration/
 
+# Output
+*.png
+*.mhd
+*.raw
+
+# General ignores
 *~
 *.autosave
 *.a
