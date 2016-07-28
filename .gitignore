@@ -42,6 +42,9 @@ Thumbs.db
 /.qmake.cache
 /.qmake.stash
 
+# VSCode
+.browse.VC.*
+
 # Cmake
 *.cbp
 cmake_clean
