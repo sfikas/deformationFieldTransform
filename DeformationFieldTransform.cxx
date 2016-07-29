@@ -12,12 +12,12 @@
 #endif
 #include "itkResampleImageFilter.h"
 
-const     unsigned int   Dimension = 2;
+const     unsigned int   Dimension = 3;
 typedef   unsigned char  PixelType;
 typedef   itk::Image< PixelType, Dimension > ImageType;
 
-static void CreateFixedImage(ImageType::Pointer image);
-static void CreateMovingImage(ImageType::Pointer image);
+template <unsigned int d> void readImage(const char *fn);
+
   
 int main(int argc, char * argv[])
 {
@@ -29,23 +29,45 @@ int main(int argc, char * argv[])
   typedef   itk::Vector< VectorComponentType, Dimension >    VectorType;
   typedef   itk::Image< VectorType,  Dimension >   DeformationFieldType;
 
-  ImageType::Pointer fixedImage = ImageType::New();
-  CreateFixedImage(fixedImage);
-  
-  ImageType::Pointer movingImage = ImageType::New();
-  CreateMovingImage(movingImage);
-  
+  readImage<3>(argv[1]);
+
+  ImageType::Pointer inputImage = ImageType::New();
+
+  // Set up the file readers
+  typedef itk::ImageFileReader<ImageType>            ImageReaderType;
+  typedef itk::ImageFileReader<DeformationFieldType> FieldReaderType;
+
+  typename ImageReaderType::Pointer ImageReader = ImageReaderType::New();
+  ImageReader->SetFileName( "input.nii" );
+
+  // Update the reader
+  try {
+    ImageReader->Update();
+  }
+  catch( itk::ExceptionObject& err ) {
+    std::cout << "Could not read the input images." << std::endl;
+    std::cout << err << std::endl;
+    exit( EXIT_FAILURE );
+  }
+
+  ImageType::RegionType region = inputImage->GetLargestPossibleRegion();
+  ImageType::SizeType size = region.GetSize();
+
+  std::cout << "Read input file with size ";
+  std::cout << size << std::endl;
+
 #if ITK_VERSION_MAJOR < 4
   typedef itk::DeformationFieldSource<DeformationFieldType>  DeformationFieldSourceType;
 #else
   typedef itk::LandmarkDisplacementFieldSource<DeformationFieldType>  DeformationFieldSourceType;
 #endif
   DeformationFieldSourceType::Pointer deformationFieldSource = DeformationFieldSourceType::New();
-  deformationFieldSource->SetOutputSpacing( fixedImage->GetSpacing() );
-  deformationFieldSource->SetOutputOrigin(  fixedImage->GetOrigin() );
-  deformationFieldSource->SetOutputRegion(  fixedImage->GetLargestPossibleRegion() );
-  deformationFieldSource->SetOutputDirection( fixedImage->GetDirection() );
+  deformationFieldSource->SetOutputSpacing( inputImage->GetSpacing() );
+  deformationFieldSource->SetOutputOrigin(  inputImage->GetOrigin() );
+  deformationFieldSource->SetOutputRegion(  inputImage->GetLargestPossibleRegion() );
+  deformationFieldSource->SetOutputDirection( inputImage->GetDirection() );
 
+//GS
   //  Create source and target landmarks.
   typedef DeformationFieldSourceType::LandmarkContainerPointer   LandmarkContainerPointer;
   typedef DeformationFieldSourceType::LandmarkContainer          LandmarkContainerType;
@@ -99,9 +121,9 @@ int main(int argc, char * argv[])
   }
   
 #if ITK_VERSION_MAJOR < 4
-  typedef itk::DeformationFieldTransform<VectorComponentType, 2>  DeformationFieldTransformType;
+  typedef itk::DeformationFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
 #else
-  typedef itk::DisplacementFieldTransform<VectorComponentType, 2>  DeformationFieldTransformType;
+  typedef itk::DisplacementFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
 #endif
   DeformationFieldTransformType::Pointer deformationFieldTransform = DeformationFieldTransformType::New();
 
@@ -112,12 +134,12 @@ int main(int argc, char * argv[])
 #endif  
   typedef itk::ResampleImageFilter<ImageType, ImageType, VectorComponentType >    ResampleFilterType;
   ResampleFilterType::Pointer resampleFilter = ResampleFilterType::New();
-  resampleFilter->SetInput( movingImage );
-  resampleFilter->SetTransform( deformationFieldTransform );
-  resampleFilter->SetSize( fixedImage->GetLargestPossibleRegion().GetSize() );
-  resampleFilter->SetOutputOrigin(  fixedImage->GetOrigin() );
-  resampleFilter->SetOutputSpacing( fixedImage->GetSpacing() );
-  resampleFilter->SetOutputDirection( fixedImage->GetDirection() );
+  resampleFilter->SetInput( inputImage );
+  //resampleFilter->SetTransform( deformationFieldTransform );
+  resampleFilter->SetSize( inputImage->GetLargestPossibleRegion().GetSize() );
+  resampleFilter->SetOutputOrigin(  inputImage->GetOrigin() );
+  resampleFilter->SetOutputSpacing( inputImage->GetSpacing() );
+  resampleFilter->SetOutputDirection( inputImage->GetDirection() );
   resampleFilter->SetDefaultPixelValue( 200 );
   resampleFilter->GetOutput();
 
@@ -125,83 +147,56 @@ int main(int argc, char * argv[])
   typedef itk::ImageFileWriter<  ImageType  > WriterType;
   WriterType::Pointer writer = WriterType::New();
   writer->SetInput (  resampleFilter->GetOutput() );
-  writer->SetFileName( "output.png" );
+  writer->SetFileName( "output.nii" );
   writer->Update();
   
   return EXIT_SUCCESS;
 }
 
-void CreateFixedImage(ImageType::Pointer image)
+
+template <unsigned int d> void readImage(const char *fn)
 {
-  // Create a black image with a white square
-  ImageType::IndexType start;
-  start.Fill(0);
- 
-  ImageType::SizeType size;
-  size.Fill(100);
- 
-  ImageType::RegionType region;
-  region.SetSize(size);
-  region.SetIndex(start);
- 
-  image->SetRegions(region);
-  image->Allocate();
-  image->FillBuffer(0);
- 
-  itk::ImageRegionIterator<ImageType> imageIterator(image,region);
- 
-  while(!imageIterator.IsAtEnd())
-    {
-    if(imageIterator.GetIndex()[0] > 40 && imageIterator.GetIndex()[0] < 60 &&
-      imageIterator.GetIndex()[1] > 40 && imageIterator.GetIndex()[1] < 60)
-      {
-      imageIterator.Set(255);
-      }
-    ++imageIterator;
-    }
+  // Verify command line arguments
 
-  // Write the deformation field
-  typedef itk::ImageFileWriter<  ImageType  > WriterType;
-  WriterType::Pointer writer = WriterType::New();
-  writer->SetInput (  image );
-  writer->SetFileName( "fixed.png" );
-  writer->Update();
-}
+  typedef unsigned char PixelType;
 
+  typedef itk::Image< PixelType, d >        ImageType;
+  typedef itk::ImageFileReader< ImageType > ReaderType;
 
-void CreateMovingImage(ImageType::Pointer image)
-{
-  // Create a black image with a white square
-  ImageType::IndexType start;
-  start.Fill(0);
- 
-  ImageType::SizeType size;
-  size.Fill(100);
- 
-  ImageType::RegionType region;
-  region.SetSize(size);
-  region.SetIndex(start);
- 
-  image->SetRegions(region);
-  image->Allocate();
-  image->FillBuffer(0);
- 
-  itk::ImageRegionIterator<ImageType> imageIterator(image,region);
- 
-  while(!imageIterator.IsAtEnd())
-    {
-    if(imageIterator.GetIndex()[0] > 20 && imageIterator.GetIndex()[0] < 80 &&
-      imageIterator.GetIndex()[1] > 20 && imageIterator.GetIndex()[1] < 80)
-      {
-      imageIterator.Set(100);
-      }
-    ++imageIterator;
-    }
+  typename ReaderType::Pointer reader = ReaderType::New();
+  typename ImageType::Pointer image;   
+  typename ImageType::RegionType region;
+  typename ImageType::SizeType size;
 
-  // Write the deformation field
-  typedef itk::ImageFileWriter<  ImageType  > WriterType;
-  WriterType::Pointer writer = WriterType::New();
-  writer->SetInput (  image );
-  writer->SetFileName( "moving.png" );
-  writer->Update();
+  reader->SetFileName(fn);
+  reader->Update();
+
+  image = reader->GetOutput();
+  region = image->GetLargestPossibleRegion();
+  size = region.GetSize();
+
+  std::cout << size << std::endl;
+
+  // An example image had w = 200 and h = 100
+  // (it is wider than it is tall). The above output
+  // 200 x 100
+  // so w = GetSize()[0]
+  // and h = GetSize()[1]
+
+  // A pixel inside the region
+  typename ImageType::IndexType indexInside;
+  indexInside[0] = 150;
+  indexInside[1] = 50;
+  std::cout << region.IsInside(indexInside) << std::endl;
+
+  // A pixel outside the region
+  typename ImageType::IndexType indexOutside;
+  indexOutside[0] = 50;
+  indexOutside[1] = 150;
+  std::cout << region.IsInside(indexOutside) << std::endl;
+
+  // This means that the [0] component of the index is referencing the
+  // left to right (x) value and the [1] component of Index is referencing
+  // the top to bottom (y) value
+
 }
