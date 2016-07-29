@@ -18,31 +18,21 @@ typedef   itk::Image< PixelType, Dimension > ImageType;
 
 template <unsigned int d> void readImage(const char *fn);
 
-  
+
 int main(int argc, char * argv[])
 {
-#if ITK_VERSION_MAJOR < 4
-  typedef   float           VectorComponentType;
-#else
-  typedef   double          VectorComponentType;
-#endif
-  typedef   itk::Vector< VectorComponentType, Dimension >    VectorType;
-  typedef   itk::Image< VectorType,  Dimension >   DeformationFieldType;
-
   //readImage<3>(argv[1]);
-
   ImageType::Pointer inputImage = ImageType::New();
-
-  // Set up the file readers
   typedef itk::ImageFileReader<ImageType>            ImageReaderType;
-  typedef itk::ImageFileReader<DeformationFieldType> FieldReaderType;
-
   typename ImageReaderType::Pointer ImageReader = ImageReaderType::New();
   ImageReader->SetFileName(argv[1]);
 
-  // Update the reader
+  //
+  // Read the input volume (argument 1)
+  //
   try {
     ImageReader->Update();
+    inputImage = ImageReader->GetOutput();
   }
   catch( itk::ExceptionObject& err ) {
     std::cout << "Could not read the input images." << std::endl;
@@ -50,13 +40,45 @@ int main(int argc, char * argv[])
     exit( EXIT_FAILURE );
   }
 
-  inputImage = ImageReader->GetOutput();
   ImageType::RegionType region = inputImage->GetLargestPossibleRegion();
-  ImageType::SizeType size = region.GetSize();
-
+  ImageType::SizeType size = region.GetSize();    
   std::cout << "Read input file with size ";
   std::cout << size << std::endl;
 
+  //
+  // Read the input deformation (argument 2)
+  //
+#if ITK_VERSION_MAJOR < 4
+  typedef   float           VectorComponentType;
+#else
+  typedef   double          VectorComponentType;
+#endif
+  typedef itk::Vector< VectorComponentType, Dimension >    VectorType;  
+  typedef itk::Image< VectorType,  Dimension >   DeformationFieldType;
+  DeformationFieldType::Pointer inputDeformationField = DeformationFieldType::New();
+  typedef itk::ImageFileReader<DeformationFieldType> DeformationFieldReaderType;
+  typename DeformationFieldReaderType::Pointer DeformationFieldReader = DeformationFieldReaderType::New();
+  DeformationFieldReader->SetFileName(argv[2]);
+
+  //
+  // Read the input volume (argument 1)
+  //
+  try {
+    DeformationFieldReader->Update();
+    inputDeformationField = DeformationFieldReader->GetOutput();
+  }
+  catch( itk::ExceptionObject& err ) {
+    std::cout << "Could not read the input deformation field." << std::endl;
+    std::cout << err << std::endl;
+    exit( EXIT_FAILURE );
+  }
+
+  DeformationFieldType::RegionType df_region = inputDeformationField->GetLargestPossibleRegion();
+  DeformationFieldType::SizeType df_size = df_region.GetSize();    
+  std::cout << "Read input file with size ";
+  std::cout << df_size << std::endl;
+
+/*
 #if ITK_VERSION_MAJOR < 4
   typedef itk::DeformationFieldSource<DeformationFieldType>  DeformationFieldSourceType;
 #else
@@ -68,7 +90,15 @@ int main(int argc, char * argv[])
   deformationFieldSource->SetOutputRegion(  inputImage->GetLargestPossibleRegion() );
   deformationFieldSource->SetOutputDirection( inputImage->GetDirection() );
 
-//GS
+  // Write the deformation field
+  {
+  typedef itk::ImageFileWriter<  DeformationFieldType  > WriterType;
+  WriterType::Pointer writer = WriterType::New();
+  writer->SetInput (  deformationFieldSource->GetOutput() );
+  writer->SetFileName( "deformation.mhd" );
+  writer->Update();
+  }
+
   //  Create source and target landmarks.
   typedef DeformationFieldSourceType::LandmarkContainerPointer   LandmarkContainerPointer;
   typedef DeformationFieldSourceType::LandmarkContainer          LandmarkContainerType;
@@ -120,7 +150,9 @@ int main(int argc, char * argv[])
   writer->SetFileName( "deformation.mhd" );
   writer->Update();
   }
-  
+*/
+
+/*
 #if ITK_VERSION_MAJOR < 4
   typedef itk::DeformationFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
 #else
@@ -128,11 +160,13 @@ int main(int argc, char * argv[])
 #endif
   DeformationFieldTransformType::Pointer deformationFieldTransform = DeformationFieldTransformType::New();
 
+
 #if ITK_VERSION_MAJOR < 4
   deformationFieldTransform->SetDeformationField( deformationFieldSource->GetOutput() );
 #else
   deformationFieldTransform->SetDisplacementField( deformationFieldSource->GetOutput() );
-#endif  
+#endif
+*/
   typedef itk::ResampleImageFilter<ImageType, ImageType, VectorComponentType >    ResampleFilterType;
   ResampleFilterType::Pointer resampleFilter = ResampleFilterType::New();
   resampleFilter->SetInput( inputImage );
@@ -143,6 +177,7 @@ int main(int argc, char * argv[])
   resampleFilter->SetOutputDirection( inputImage->GetDirection() );
   resampleFilter->SetDefaultPixelValue( 200 );
   resampleFilter->GetOutput();
+
 
   // Write the output
   typedef itk::ImageFileWriter<  ImageType  > WriterType;
