@@ -13,7 +13,7 @@
 #include "itkResampleImageFilter.h"
 
 const     unsigned int   Dimension = 3;
-typedef   unsigned char  PixelType;
+typedef   float  PixelType;
 typedef   itk::Image< PixelType, Dimension > ImageType;
 
 template <unsigned int d> void readImage(const char *fn);
