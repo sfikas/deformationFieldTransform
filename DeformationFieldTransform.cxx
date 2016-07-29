@@ -152,7 +152,7 @@ int main(int argc, char * argv[])
   }
 */
 
-/*
+
 #if ITK_VERSION_MAJOR < 4
   typedef itk::DeformationFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
 #else
@@ -162,20 +162,21 @@ int main(int argc, char * argv[])
 
 
 #if ITK_VERSION_MAJOR < 4
-  deformationFieldTransform->SetDeformationField( deformationFieldSource->GetOutput() );
+  //deformationFieldTransform->SetDeformationField( deformationFieldSource->GetOutput() );
+  deformationFieldTransform->SetDeformationField( inputDeformationField );
 #else
-  deformationFieldTransform->SetDisplacementField( deformationFieldSource->GetOutput() );
+  deformationFieldTransform->SetDisplacementField( inputDeformationField );
 #endif
-*/
+
   typedef itk::ResampleImageFilter<ImageType, ImageType, VectorComponentType >    ResampleFilterType;
   ResampleFilterType::Pointer resampleFilter = ResampleFilterType::New();
   resampleFilter->SetInput( inputImage );
-  //resampleFilter->SetTransform( deformationFieldTransform );
+  resampleFilter->SetTransform( deformationFieldTransform );
   resampleFilter->SetSize( inputImage->GetLargestPossibleRegion().GetSize() );
   resampleFilter->SetOutputOrigin(  inputImage->GetOrigin() );
   resampleFilter->SetOutputSpacing( inputImage->GetSpacing() );
   resampleFilter->SetOutputDirection( inputImage->GetDirection() );
-  resampleFilter->SetDefaultPixelValue( 200 );
+  resampleFilter->SetDefaultPixelValue( 0 );
   resampleFilter->GetOutput();
 
 
@@ -183,7 +184,7 @@ int main(int argc, char * argv[])
   typedef itk::ImageFileWriter<  ImageType  > WriterType;
   WriterType::Pointer writer = WriterType::New();
   writer->SetInput (  resampleFilter->GetOutput() );
-  writer->SetFileName( "output.nii" );
+  writer->SetFileName(argv[3]);
   writer->Update();
   
   return EXIT_SUCCESS;
