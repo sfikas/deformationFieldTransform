@@ -29,7 +29,7 @@ int main(int argc, char * argv[])
   typedef   itk::Vector< VectorComponentType, Dimension >    VectorType;
   typedef   itk::Image< VectorType,  Dimension >   DeformationFieldType;
 
-  readImage<3>(argv[1]);
+  //readImage<3>(argv[1]);
 
   ImageType::Pointer inputImage = ImageType::New();
 
@@ -38,7 +38,7 @@ int main(int argc, char * argv[])
   typedef itk::ImageFileReader<DeformationFieldType> FieldReaderType;
 
   typename ImageReaderType::Pointer ImageReader = ImageReaderType::New();
-  ImageReader->SetFileName( "input.nii" );
+  ImageReader->SetFileName(argv[1]);
 
   // Update the reader
   try {
@@ -50,6 +50,7 @@ int main(int argc, char * argv[])
     exit( EXIT_FAILURE );
   }
 
+  inputImage = ImageReader->GetOutput();
   ImageType::RegionType region = inputImage->GetLargestPossibleRegion();
   ImageType::SizeType size = region.GetSize();
 
