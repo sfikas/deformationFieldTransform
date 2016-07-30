@@ -16,12 +16,8 @@ const     unsigned int   Dimension = 3;
 typedef   float  PixelType;
 typedef   itk::Image< PixelType, Dimension > ImageType;
 
-template <unsigned int d> void readImage(const char *fn);
-
-
 int main(int argc, char * argv[])
 {
-  //readImage<3>(argv[1]);
   ImageType::Pointer inputImage = ImageType::New();
   typedef itk::ImageFileReader<ImageType>            ImageReaderType;
   typename ImageReaderType::Pointer ImageReader = ImageReaderType::New();
@@ -60,9 +56,6 @@ int main(int argc, char * argv[])
   typename DeformationFieldReaderType::Pointer DeformationFieldReader = DeformationFieldReaderType::New();
   DeformationFieldReader->SetFileName(argv[2]);
 
-  //
-  // Read the input volume (argument 1)
-  //
   try {
     DeformationFieldReader->Update();
     inputDeformationField = DeformationFieldReader->GetOutput();
@@ -78,6 +71,9 @@ int main(int argc, char * argv[])
   std::cout << "Read input file with size ";
   std::cout << df_size << std::endl;
 
+  //
+  // Apply the deformation
+  //
 #if ITK_VERSION_MAJOR < 4
   typedef itk::DeformationFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
 #else
@@ -87,7 +83,6 @@ int main(int argc, char * argv[])
 
 
 #if ITK_VERSION_MAJOR < 4
-  //deformationFieldTransform->SetDeformationField( deformationFieldSource->GetOutput() );
   deformationFieldTransform->SetDeformationField( inputDeformationField );
 #else
   deformationFieldTransform->SetDisplacementField( inputDeformationField );
@@ -113,52 +108,4 @@ int main(int argc, char * argv[])
   writer->Update();
   
   return EXIT_SUCCESS;
-}
-
-
-template <unsigned int d> void readImage(const char *fn)
-{
-  // Verify command line arguments
-
-  typedef unsigned char PixelType;
-
-  typedef itk::Image< PixelType, d >        ImageType;
-  typedef itk::ImageFileReader< ImageType > ReaderType;
-
-  typename ReaderType::Pointer reader = ReaderType::New();
-  typename ImageType::Pointer image;   
-  typename ImageType::RegionType region;
-  typename ImageType::SizeType size;
-
-  reader->SetFileName(fn);
-  reader->Update();
-
-  image = reader->GetOutput();
-  region = image->GetLargestPossibleRegion();
-  size = region.GetSize();
-
-  std::cout << size << std::endl;
-
-  // An example image had w = 200 and h = 100
-  // (it is wider than it is tall). The above output
-  // 200 x 100
-  // so w = GetSize()[0]
-  // and h = GetSize()[1]
-
-  // A pixel inside the region
-  typename ImageType::IndexType indexInside;
-  indexInside[0] = 150;
-  indexInside[1] = 50;
-  std::cout << region.IsInside(indexInside) << std::endl;
-
-  // A pixel outside the region
-  typename ImageType::IndexType indexOutside;
-  indexOutside[0] = 50;
-  indexOutside[1] = 150;
-  std::cout << region.IsInside(indexOutside) << std::endl;
-
-  // This means that the [0] component of the index is referencing the
-  // left to right (x) value and the [1] component of Index is referencing
-  // the top to bottom (y) value
-
 }
