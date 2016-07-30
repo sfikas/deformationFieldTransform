@@ -11,6 +11,7 @@
 #include "itkLandmarkDisplacementFieldSource.h"
 #endif
 #include "itkResampleImageFilter.h"
+#include "itkNearestNeighborInterpolateImageFunction.h"
 
 const     unsigned int   Dimension = 3;
 typedef   float  PixelType;
