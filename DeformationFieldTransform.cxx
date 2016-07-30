@@ -12,11 +12,15 @@
 #endif
 #include "itkResampleImageFilter.h"
 #include "itkNearestNeighborInterpolateImageFunction.h"
+#include "itkImageRegionConstIterator.h"
 
 const     unsigned int   Dimension = 3;
 typedef   float  PixelType;
 typedef   itk::Image< PixelType, Dimension > ImageType;
+// This is used to count voxels of images
+typedef   itk::ImageRegionConstIterator< ImageType >  IteratorType;
 
+std::size_t countNonzeroVoxels(ImageType::Pointer im, ImageType::RegionType region);
 
 int main(int argc, char * argv[])
 {
@@ -43,6 +47,7 @@ int main(int argc, char * argv[])
   std::cout << "Read input file with size ";
   std::cout << size << std::endl;
 
+  std::cout << "Read " << countNonzeroVoxels(inputImage, region) << "voxels" << std::endl;  
   //
   // Read the input deformation (argument 2)
   //
@@ -113,5 +118,20 @@ int main(int argc, char * argv[])
   writer->SetFileName(argv[3]);
   writer->Update();
   
+  std::cout << "Wrote " << countNonzeroVoxels(resampleFilter->GetOutput(), resampleFilter->GetOutput()->GetLargestPossibleRegion()) << "voxels" << std::endl;  
   return EXIT_SUCCESS;
+}
+
+std::size_t countNonzeroVoxels(ImageType::Pointer im, ImageType::RegionType region)
+{
+  IteratorType it( im, region );
+  std::size_t counter = 0;
+  
+  it.GoToBegin();
+  while (!it.IsAtEnd()) { 
+    if(it.Value())
+      counter++;
+    ++it;
+  }
+  return counter;
 }
