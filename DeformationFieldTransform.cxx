@@ -16,6 +16,7 @@ const     unsigned int   Dimension = 3;
 typedef   float  PixelType;
 typedef   itk::Image< PixelType, Dimension > ImageType;
 
+
 int main(int argc, char * argv[])
 {
   ImageType::Pointer inputImage = ImageType::New();
@@ -89,9 +90,13 @@ int main(int argc, char * argv[])
 #endif
 
   typedef itk::ResampleImageFilter<ImageType, ImageType, VectorComponentType >    ResampleFilterType;
+  typedef   itk::NearestNeighborInterpolateImageFunction<ImageType> InterpolatorType;  
+  InterpolatorType::Pointer interpolator = InterpolatorType::New();  
+  
   ResampleFilterType::Pointer resampleFilter = ResampleFilterType::New();
   resampleFilter->SetInput( inputImage );
   resampleFilter->SetTransform( deformationFieldTransform );
+  resampleFilter->SetInterpolator( interpolator );
   resampleFilter->SetSize( inputImage->GetLargestPossibleRegion().GetSize() );
   resampleFilter->SetOutputOrigin(  inputImage->GetOrigin() );
   resampleFilter->SetOutputSpacing( inputImage->GetSpacing() );
