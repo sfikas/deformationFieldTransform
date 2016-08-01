@@ -2,11 +2,11 @@
 
 ## DeformationFieldTransform
 
-A C++ app that uses a 3D deformation field (field of 3D vectors) to warp/deform an input 3D volume.
+A C++ app that uses a 3D deformation field to warp/deform an input 3D volume.
 
 ## Requirements
 
-This app has been requires [ITK]. 
+This app requires the Insight Segmentation & Registration Toolkit ([ITK]). 
 It has been tested with [ITK] version 4.11.
 
 ## Build
