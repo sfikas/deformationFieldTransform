@@ -13,6 +13,9 @@
 #include "itkResampleImageFilter.h"
 #include "itkNearestNeighborInterpolateImageFunction.h"
 #include "itkImageRegionConstIterator.h"
+#include <itkWarpImageFilter.h>
+
+#define USE_WARPER
 
 const     unsigned int   Dimension = 3;
 typedef   float  PixelType;
@@ -81,24 +84,37 @@ int main(int argc, char * argv[])
   //
   // Apply the deformation
   //
-#if ITK_VERSION_MAJOR < 4
-  typedef itk::DeformationFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
+  typedef itk::NearestNeighborInterpolateImageFunction<ImageType> InterpolatorType;  
+  InterpolatorType::Pointer interpolator = InterpolatorType::New();
+  ImageType::Pointer outputImage = ImageType::New();  
+    
+#ifdef USE_WARPER
+  typedef itk::WarpImageFilter<ImageType, ImageType, DeformationFieldType> WarperType;
+  WarperType::Pointer warper = WarperType::New();
+  warper->SetInput( inputImage );
+  warper->SetInterpolator( interpolator );
+  warper->SetOutputOrigin( inputImage->GetOrigin() );  
+  warper->SetOutputSpacing( inputImage->GetSpacing() );
+  warper->SetOutputDirection( inputImage->GetDirection() );
+  #if ITK_VERSION_MAJOR < 4  
+  warper->SetDeformationField(inputDeformationField);
+  #else
+  warper->SetDisplacementField(inputDeformationField);
+  #endif
+  outputImage = warper->GetOutput();    
 #else
-  typedef itk::DisplacementFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
-#endif
+  #if ITK_VERSION_MAJOR < 4
+    typedef itk::DeformationFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
+  #else
+    typedef itk::DisplacementFieldTransform<VectorComponentType, Dimension>  DeformationFieldTransformType;
+  #endif
   DeformationFieldTransformType::Pointer deformationFieldTransform = DeformationFieldTransformType::New();
-
-
-#if ITK_VERSION_MAJOR < 4
-  deformationFieldTransform->SetDeformationField( inputDeformationField );
-#else
-  deformationFieldTransform->SetDisplacementField( inputDeformationField );
-#endif
-
+  #if ITK_VERSION_MAJOR < 4
+    deformationFieldTransform->SetDeformationField( inputDeformationField );
+  #else
+    deformationFieldTransform->SetDisplacementField( inputDeformationField );
+  #endif
   typedef itk::ResampleImageFilter<ImageType, ImageType, VectorComponentType >    ResampleFilterType;
-  typedef   itk::NearestNeighborInterpolateImageFunction<ImageType> InterpolatorType;  
-  InterpolatorType::Pointer interpolator = InterpolatorType::New();  
-  
   ResampleFilterType::Pointer resampleFilter = ResampleFilterType::New();
   resampleFilter->SetInput( inputImage );
   resampleFilter->SetTransform( deformationFieldTransform );
@@ -108,17 +124,18 @@ int main(int argc, char * argv[])
   resampleFilter->SetOutputSpacing( inputImage->GetSpacing() );
   resampleFilter->SetOutputDirection( inputImage->GetDirection() );
   resampleFilter->SetDefaultPixelValue( 0 );
-  resampleFilter->GetOutput();
+  outputImage = resampleFilter->GetOutput();
+#endif
 
 
   // Write the output
   typedef itk::ImageFileWriter<  ImageType  > WriterType;
-  WriterType::Pointer writer = WriterType::New();
-  writer->SetInput (  resampleFilter->GetOutput() );
+  WriterType::Pointer writer = WriterType::New();  
+  writer->SetInput (outputImage);
   writer->SetFileName(argv[3]);
   writer->Update();
   
-  std::cout << "Wrote " << countNonzeroVoxels(resampleFilter->GetOutput(), resampleFilter->GetOutput()->GetLargestPossibleRegion()) << "voxels" << std::endl;  
+  std::cout << "Wrote " << countNonzeroVoxels(outputImage, outputImage->GetLargestPossibleRegion()) << "voxels" << std::endl;  
   return EXIT_SUCCESS;
 }
 
