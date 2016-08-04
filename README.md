@@ -1,4 +1,4 @@
-## deformationFieldTransform
+# deformationFieldTransform
 
 A C++ app that uses a 3D vector field to warp/deform an input 3D volume.
 
@@ -12,7 +12,7 @@ It has been tested with version 4.11 of the toolkit.
 Run the following to build:
 
 ```
-cd DeformationFieldTransform/
+cd deformationFieldTransform/
 cmake .
 make
 ```
